@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  printer-api:
+    image: aco-printer-api:latest
+    container_name: aco-printer-api
+    build:
+      context: .
+      dockerfile: src/AcoTestApi.API/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - PORT=8080
+      - API_TOKEN=aco-secret-token
+    restart: always

@@ -1,0 +1,6 @@
+@AcoTestApi.API_HostAddress = http://localhost:5157
+
+GET {{AcoTestApi.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

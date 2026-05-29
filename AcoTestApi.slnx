@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AcoTestApi.API/AcoTestApi.API.csproj" />
+    <Project Path="src/AcoTestApi.Application/AcoTestApi.Application.csproj" />
+    <Project Path="src/AcoTestApi.Domain/AcoTestApi.Domain.csproj" />
+    <Project Path="src/AcoTestApi.Infrastructure/AcoTestApi.Infrastructure.csproj" />
+    <Project Path="src/AcoTestApi.Tests/AcoTestApi.Tests.csproj" />
+  </Folder>
+</Solution>

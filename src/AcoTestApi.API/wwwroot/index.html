@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACO Thermal Printer Terminal</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <!-- FontAwesome icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Main Style -->
+    <link rel="stylesheet" href="css/style.css?v=1.1.0">
+</head>
+<body>
+    <div class="glass-bg-deco-1"></div>
+    <div class="glass-bg-deco-2"></div>
+
+    <div class="app-container">
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-logo">
+                <i class="fa-solid fa-print logo-icon"></i>
+                <div class="logo-text">
+                    <h1>ACO</h1>
+                    <span>Thermal Printer Terminal</span>
+                </div>
+            </div>
+            <div class="header-status-panel">
+                <div id="auth-warning-badge" class="badge badge-warning hidden">
+                    <i class="fa-solid fa-lock"></i> Token Koruması Aktif
+                </div>
+                <div class="connection-status-badge">
+                    <div id="status-pulse-dot" class="status-dot disconnected"></div>
+                    <span id="txt-connection-state">Bağlantı Yok</span>
+                    <span id="txt-connection-mode" class="mode-badge">NONE</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="app-main">
+            <!-- LEFT PANEL: CONTROLLER & SIMULATOR -->
+            <section class="panel panel-left">
+                <div class="panel-header">
+                    <i class="fa-solid fa-sliders"></i>
+                    <h2>Yazıcı Bağlantısı & Simülatör</h2>
+                </div>
+                
+                <!-- Connection Manager -->
+                <div class="section-card">
+                    <h3>Bağlantı Kur</h3>
+                    <div class="connect-actions">
+                        <button id="btn-connect-usb" class="btn btn-connect" onclick="connectPrinter('usb')">
+                            <i class="fa-brands fa-usb"></i> USB Bağlan
+                        </button>
+                        <button id="btn-connect-lan" class="btn btn-connect" onclick="connectPrinter('lan')">
+                            <i class="fa-solid fa-network-wired"></i> LAN Bağlan
+                        </button>
+                        <button id="btn-disconnect" class="btn btn-danger" onclick="disconnectPrinter()">
+                            <i class="fa-solid fa-power-off"></i> Kes
+                        </button>
+                    </div>
+                    <div id="reconnect-countdown-container" class="reconnect-countdown hidden">
+                        <p><i class="fa-solid fa-arrows-spin fa-spin"></i> Yeniden bağlanılıyor... <span id="reconnect-timer">0s</span></p>
+                        <div class="progress-bar-bg">
+                            <div id="reconnect-progress-bar" class="progress-bar-fill" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Hardware Simulation Control -->
+                <div class="section-card">
+                    <h3>Donanım Hatalarını Tetikle</h3>
+                    <p class="card-desc">API hata yönetimini ve UI tepkisini test etmek için aşağıdaki hataları simüle edebilirsiniz.</p>
+                    <div class="error-simulation-grid">
+                        <button class="btn btn-sim-error active" data-error="None" onclick="simulateError('None')">
+                            <i class="fa-solid fa-circle-check"></i> Hata Yok (Normal)
+                        </button>
+                        <button class="btn btn-sim-error" data-error="PAPER_OUT" onclick="simulateError('PAPER_OUT')">
+                            <i class="fa-solid fa-scroll"></i> Kağıt Bitti
+                        </button>
+                        <button class="btn btn-sim-error" data-error="PAPER_JAM" onclick="simulateError('PAPER_JAM')">
+                            <i class="fa-solid fa-scissors"></i> Kağıt Sıkıştı
+                        </button>
+                        <button class="btn btn-sim-error" data-error="COVER_OPEN" onclick="simulateError('COVER_OPEN')">
+                            <i class="fa-solid fa-folder-open"></i> Kapak Açık
+                        </button>
+                        <button class="btn btn-sim-error" data-error="OVERHEAT" onclick="simulateError('OVERHEAT')">
+                            <i class="fa-solid fa-temperature-high"></i> Aşırı Isındı
+                        </button>
+                        <button class="btn btn-sim-error" data-error="COMM_ERROR" onclick="simulateError('COMM_ERROR')">
+                            <i class="fa-solid fa-wifi-slash"></i> İletişim Hatası
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Roll Prediction Widget -->
+                <div class="section-card">
+                    <h3>Rulo Ömrü & Tahminleme</h3>
+                    <div class="roll-status-container">
+                        <div class="roll-progress-circle">
+                            <svg viewBox="0 0 36 36" class="circular-chart">
+                                <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                <path id="roll-circle-fill" class="circle" stroke-dasharray="100, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                            </svg>
+                            <div class="roll-progress-text">
+                                <span id="txt-paper-percentage">100%</span>
+                                <small>Kalan Kağıt</small>
+                            </div>
+                        </div>
+                        <div class="roll-details">
+                            <div class="detail-row">
+                                <span class="lbl">Rulo Uzunluğu:</span>
+                                <span id="txt-paper-length" class="val">5000.0 cm</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="lbl">Tahmini Fiş:</span>
+                                <span id="txt-estimated-prints" class="val">333 adet</span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="lbl">Toplam Basılan:</span>
+                                <span id="txt-total-printed" class="val">0 adet</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- MIDDLE PANEL: TEST CONSOLE & ACTIONS -->
+            <section class="panel panel-middle">
+                <div class="panel-header">
+                    <i class="fa-solid fa-keyboard"></i>
+                    <h2>Baskı Kontrol Konsolu</h2>
+                </div>
+
+                <!-- API Authentication Config -->
+                <div class="section-card credentials-card">
+                    <div class="cred-header">
+                        <h3>Yetkilendirme (API Security)</h3>
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <div class="form-group row-group">
+                        <label for="input-api-token">X-Api-Token:</label>
+                        <div class="input-with-icon">
+                            <i class="fa-solid fa-key"></i>
+                            <input type="text" id="input-api-token" placeholder="Token Yok (Bypass)" value="aco-secret-token" oninput="saveTokenLocal()">
+                        </div>
+                    </div>
+                    <small class="helper-text">Mülakatın "basit yetkilendirme" bonus gereksinimi. .env'deki token ile eşleşmelidir.</small>
+                </div>
+
+                <!-- Print Console -->
+                <div class="section-card print-actions-card">
+                    <!-- Idempotency & Language Row -->
+                    <div class="form-row-grid-aligned">
+                        <label for="input-job-id" class="form-grid-label">
+                            <span>Job ID / Idemp. Key:</span>
+                            <button type="button" class="btn-text-action" onclick="generateRandomJobId()">
+                                <i class="fa-solid fa-shuffle"></i> Rastgele
+                            </button>
+                        </label>
+                        <label for="select-language" class="form-grid-label">İçerik Dili (Çoklu Dil):</label>
+                        
+                        <input type="text" id="input-job-id" placeholder="Boş bırakılabilir">
+                        <select id="select-language">
+                            <option value="tr">Türkçe (TR)</option>
+                            <option value="en">English (EN)</option>
+                        </select>
+                        
+                        <small class="helper-text grid-helper-text">Aynı ID ile tekrarlarda mükerrer baskı yapılmaz (Idempotency).</small>
+                    </div>
+
+                    <!-- Print Tabs -->
+                    <div class="console-tabs">
+                        <button class="tab-link active" onclick="openTab(event, 'tab-text')">
+                            <i class="fa-solid fa-font"></i> Metin
+                        </button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-image')">
+                            <i class="fa-solid fa-image"></i> Görsel
+                        </button>
+                        <button class="tab-link" onclick="openTab(event, 'tab-qr')">
+                            <i class="fa-solid fa-qrcode"></i> QR Kod
+                        </button>
+                    </div>
+
+                    <!-- Tab Contents -->
+                    <div id="tab-text" class="tab-content active">
+                        <div class="form-group">
+                            <label for="textarea-text">Yazdırılacak Metin:</label>
+                            <textarea id="textarea-text" rows="8" placeholder="Termal yazıcı fiş metnini buraya yazın...">--------------------------------
+         ACO RECYCLING          
+ reverse vending recycling systems
+--------------------------------
+MachineID: ACO-TEST-0001-0001
+16 Eylül 2025 16:19:02 UTC
+Aco Recycling Default Reward
+
+Reward: 3.00 ₺
+
+Product       Quantity    Reward
+Glass            0         0
+Plastic          2         2
+Metal            1         1
+Tetrapak         0         0
+--------------------------------</textarea>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="printText()">
+                            <i class="fa-solid fa-print"></i> Metin Bastır
+                        </button>
+                    </div>
+
+                    <div id="tab-image" class="tab-content">
+                        <div class="form-group">
+                            <label>Bastırılacak Şablon Görseli Seçin:</label>
+                            <div class="image-preset-grid">
+                                <button class="btn-image-preset active" data-preset="receipt" onclick="selectImagePreset('receipt')">
+                                    <i class="fa-solid fa-file-invoice-dollar"></i> Fiş Logosu
+                                </button>
+                                <button class="btn-image-preset" data-preset="recycle" onclick="selectImagePreset('recycle')">
+                                    <i class="fa-solid fa-recycle"></i> Geri Dönüşüm Simgesi
+                                </button>
+                                <button class="btn-image-preset" data-preset="smile" onclick="selectImagePreset('smile')">
+                                    <i class="fa-regular fa-face-smile"></i> Teşekkür Emojisi
+                                </button>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="printImage()">
+                            <i class="fa-solid fa-print"></i> Görsel Bastır
+                        </button>
+                    </div>
+
+                    <div id="tab-qr" class="tab-content">
+                        <div class="form-group">
+                            <label for="input-qr-data">QR Kod İçeriği (URL veya Metin):</label>
+                            <input type="text" id="input-qr-data" placeholder="https://acorecycling.com" value="https://acorecycling.com">
+                        </div>
+                        <button class="btn btn-primary btn-block" onclick="printQr()">
+                            <i class="fa-solid fa-print"></i> QR Kod Bastır
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- RIGHT PANEL: PHYSICAL TERMINAL EMULATOR -->
+            <section class="panel panel-right">
+                <div class="panel-header">
+                    <i class="fa-solid fa-tv"></i>
+                    <h2>Yazıcı Fiş Çıktısı (Emülatör)</h2>
+                </div>
+
+                <!-- Printer Machine Graphic Container -->
+                <div class="printer-device-frame">
+                    <div class="printer-device-top">
+                        <div class="paper-slot"></div>
+                        <div class="printer-indicator-group">
+                            <div id="ind-power" class="indicator-led green font-size-xs" title="Power"></div>
+                            <div id="ind-error" class="indicator-led" title="Error"></div>
+                            <div id="ind-paper" class="indicator-led" title="Paper"></div>
+                        </div>
+                    </div>
+                    <div class="printer-device-body">
+                        <!-- Printed receipts roll out here -->
+                        <div id="receipt-paper-out-container" class="receipt-paper-feed">
+                            <!-- Receipt will slide out here dynamically -->
+                            <div class="receipt-placeholder">
+                                <i class="fa-solid fa-arrow-up"></i>
+                                <p>Baskı yapıldığında fiş burada canlı olarak belirecektir.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- BOTTOM CONSOLE: QUEUE & LOGS -->
+        <footer class="app-footer-console">
+            <!-- Queue Section -->
+            <div class="console-box console-queue">
+                <div class="console-box-header">
+                    <div class="title-with-count">
+                        <i class="fa-solid fa-list-check"></i>
+                        <h3>Aktif Baskı Kuyruğu</h3>
+                        <span id="badge-queue-count" class="counter-badge">0</span>
+                    </div>
+                    <div class="queue-eta">
+                        <span>Toplam ETA: <strong id="txt-queue-eta">0ms</strong></span>
+                    </div>
+                </div>
+                <div class="console-box-body">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Job ID</th>
+                                <th>Tip</th>
+                                <th>Tarih</th>
+                                <th>Süre</th>
+                                <th>Durum</th>
+                                <th>Aksiyon</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-queue-body">
+                            <tr>
+                                <td colspan="6" class="empty-row">Kuyrukta aktif iş bulunmuyor.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div class="console-box console-logs">
+                <div class="console-box-header">
+                    <i class="fa-solid fa-terminal"></i>
+                    <h3>Sistem & Hata Logları</h3>
+                    <div class="console-logs-actions">
+                        <button class="btn btn-secondary btn-sm" onclick="fetchLogs()">
+                            <i class="fa-solid fa-arrows-rotate"></i> Yenile
+                        </button>
+                        <a id="btn-export-csv" class="btn btn-secondary btn-sm" href="/api/logs/csv" download>
+                            <i class="fa-solid fa-file-csv"></i> CSV İndir
+                        </a>
+                    </div>
+                </div>
+                <div class="console-box-body">
+                    <div id="logs-output-container" class="logs-stream-output">
+                        <!-- Logs will stream here as raw JSON -->
+                    </div>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <!-- Error Alert Toast/Banner -->
+    <div id="error-toast" class="toast hidden">
+        <i class="fa-solid fa-circle-exclamation toast-icon"></i>
+        <div class="toast-body">
+            <h4 id="toast-title">Donanım Hatası</h4>
+            <p id="toast-message">Kağıt bitti.</p>
+        </div>
+        <button class="toast-close" onclick="closeToast()">&times;</button>
+    </div>
+
+    <!-- Main JS Application -->
+    <script src="js/app.js?v=1.1.0"></script>
+</body>
+</html>

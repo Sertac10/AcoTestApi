@@ -1,0 +1,12 @@
+# Docker Ignore list for .NET 8
+**/.git
+**/.vs
+**/.vscode
+**/bin
+**/obj
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates
+logs.json
+*.csv
